@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Wallet interface</title>
+	<link rel="stylesheet" type="text/css" href="/static/bootstrap/css/bootstrap.min.css">
+	<link rel="stylesheet" type="text/css" href="/static/cover.css">
+	<link rel="stylesheet" type="text/css" href="/static/style.css">
+  <style type="text/css">
+    .btn{
+      min-width: 200px;
+      margin: 10px;
+      margin-top: 30px;
+    }
+    main{
+      min-width: 500px;
+    }
+    .qr{
+      padding: 30px;
+      background: #fff;
+    }
+  </style>
+</head>
+<body class="text-center">
+<div class="cover-container d-flex w-100 h-100 p-3 mx-auto flex-column">
+  <header class="masthead mb-auto">
+    <div class="inner">
+      <h3 class="masthead-brand">{{wallet.name}}</h3>
+      <nav class="nav nav-masthead justify-content-center">
+        <a class="nav-link active" href="/wallets/">Home</a>
+        <a class="nav-link active" href="/wallets/{{wallet.name}}/">Back to wallet</a>
+      </nav>
+    </div>
+  </header>
+
+  <main role="main" class="inner cover">
+    <h1 class="cover-heading">Send to</h1>
+    <br>
+    <form action="./" method="POST">
+      <div class="row">
+        <div class="col col-md-8">
+          <label for="btcaddress">Address:</label>
+          <input type="text" class="form-control" name="btcaddress" id="btcaddress" aria-describedby="btcaddress-help" placeholder="Enter testnet address" value="{{address}}">
+          <small id="btcaddress-help" class="form-text text-muted">Enter a valid Bitcoin Testnet address here - base58 or bech32</small>
+        </div>
+        <div class="col col-md-4">
+          <label for="amount">Amount to send</label>
+          <input type="number" step="any" class="form-control" name="amount" id="amount" placeholder="0.001" aria-describedby="amount-help" value="{{amount}}">
+          <small id="amount-help" class="form-text text-muted">Enter the amount in BTC.</small>
+        </div>
+      </div>
+      {% if unsigned_psbt != "" %}
+      <div class="row">
+        <div class="col">
+          <label for="unsignedpsbt"><br>Unsigned transaction</label>
+          <textarea disabled class="form-control" id="unsignedpsbt" rows="10">{{unsigned_psbt}}</textarea>
+          <small class="form-text text-muted">Save this data to the SD card as <b>unsigned.psbt</b> and sign on the device.</small>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <label for="signedpsbt"><br>Signed transaction</label>
+          <textarea class="form-control" id="signedpsbt" name="signedpsbt" rows="10">{{signed_psbt}}</textarea>
+          <small class="form-text text-muted">Paste content of <b>signed.psbt</b> here.</small>
+        </div>
+      </div>
+      {% else %}
+      <input type="hidden" value="{{signed_psbt}}" name="signedpsbt">
+      {% endif %}
+      <input type="hidden" value="{{unsigned_psbt}}" name="unsignedpsbt">
+      <div class="text-muted"><br>You have {{balance.watchonly.trusted+balance.watchonly.untrusted_pending}} BTC available</div>
+      {% if unsigned_psbt == "" %}
+      <button type="submit" class="btn btn-lg btn-secondary">Send</button>
+      {% else %}
+      <button type="submit" class="btn btn-lg btn-secondary">Combine and broadcast</button>
+      {% endif %}
+    </form>   
+  </main>
+
+  <footer class="mastfoot mt-auto">
+    <div class="inner">
+      <p>Don't spend, HODL!</p>
+    </div>
+  </footer>
+</div>
+</body>
+</html>

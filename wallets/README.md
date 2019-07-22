@@ -1,0 +1,1 @@
+Here some metadata for existing wallets will be stored
