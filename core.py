@@ -7,10 +7,14 @@ import os
 INIT_AMOUNT = "0.001" # amount to send to a new wallet
 
 import sys
-if sys.version_info[1] > 6:
-	kwargs = {"capture_output": True}
-else:
-	kwargs = {"shell":True, "check":True, "stdout":subprocess.PIPE}
+
+def run(commands):
+	if sys.version_info[1] > 6:
+		kwargs = {"capture_output": True}
+		return subprocess.run(commands, **kwargs)
+	else:
+		kwargs = {"shell":True, "check":True, "stdout":subprocess.PIPE}
+		return subprocess.run(" ".join(commands), **kwargs)
 
 wallet_types = {
     b"\x04\x88\xb2\x1e": {"descriptor": 'pkh(%s)', "testnet": False, "address_type": "legacy"},
@@ -35,15 +39,15 @@ class Wallet:
 		self.props = json.loads(content)
 
 	def info(self):
-		r = subprocess.run(self.cli+["getwalletinfo"], **kwargs)
+		r = run(self.cli+["getwalletinfo"])
 		return json.loads(r.stdout.decode('utf-8'))
 
 	def balance(self):
-		r = subprocess.run(self.cli+["getbalances"], **kwargs)
+		r = run(self.cli+["getbalances"])
 		return json.loads(r.stdout.decode('utf-8'))
 
 	def newaddr(self):
-		r = subprocess.run(self.cli+["getnewaddress", "", self.props["address_type"]], **kwargs)
+		r = run(self.cli+["getnewaddress", "", self.props["address_type"]])
 		addr = r.stdout.decode('utf-8').replace("\n","")
 		self.props["addresses"].append(addr)
 		with open("wallets/%s.wallet" % self.name, "w") as f:
@@ -54,7 +58,7 @@ class Wallet:
 		ins = []
 		balance = self.balance()
 		if balance["watchonly"]["trusted"] < amount:
-			r = subprocess.run(self.cli+["listunspent", "0", "0"], **kwargs)
+			r = run(self.cli+["listunspent", "0", "0"])
 			txlist = json.loads(r.stdout.decode('utf-8'))
 			unconfirmed = 0
 			for tx in txlist:
@@ -62,16 +66,18 @@ class Wallet:
 				unconfirmed += tx["amount"]
 				if balance["watchonly"]["trusted"]+unconfirmed > amount:
 					break
-		r = subprocess.run(self.cli+["walletcreatefundedpsbt", json.dumps(ins), '[{"%s":%.8f}]' % (address, amount), '0', '{"includeWatching":true,"change_type":"%s"}' % self.props["address_type"], 'true'], **kwargs)
+		r = run(self.cli+["walletcreatefundedpsbt", json.dumps(ins), '[{"%s":%.8f}]' % (address, amount), '0', '{"includeWatching":true,"change_type":"%s"}' % self.props["address_type"], 'true'])
 		print(r)
 		return json.loads(r.stdout.decode('utf-8'))["psbt"]
 
 class Core:
 	def __init__(self, cli="bitcoin-cli"):
+		run(["bitcoind", "--daemon"])
+		# TODO: load all wallets
 		self.cli = cli.split(" ")
 
 	def load_all_wallets(self):
-		r = subprocess.run(self.cli+["listwalletdir"], **kwargs)
+		r = run(self.cli+["listwalletdir"])
 		wallets_obj = json.loads(r.stdout.decode('utf-8'))
 		loaded_wallets = self.list_wallets()
 		wallets = [wallet["name"] for wallet in wallets_obj["wallets"]]
@@ -82,11 +88,11 @@ class Core:
 
 	def load_wallet(self, name):
 		name = name.replace(" ", "_")
-		r = subprocess.run(self.cli+["loadwallet", name], **kwargs)
+		r = run(self.cli+["loadwallet", name])
 		return json.loads(r.stdout.decode('utf-8'))
 
 	def list_wallets(self):
-		r = subprocess.run(self.cli+["listwallets"], **kwargs)
+		r = run(self.cli+["listwallets"])
 		wallets = json.loads(r.stdout.decode('utf-8'))
 		files = [f[:-7] for f in os.listdir("wallets") if f[-7:]==".wallet"]
 		wallets = [w for w in wallets if w.lower() in files or w in files]
@@ -99,7 +105,7 @@ class Core:
 
 	def new_wallet(self, name, xpub):
 		name = name.replace(" ", "_")
-		r = subprocess.run(self.cli+["createwallet", name, "true"], **kwargs)
+		r = run(self.cli+["createwallet", name, "true"])
 		print(r)
 
 		raw_xpub = decode_base58(xpub, num_bytes=82)
@@ -113,13 +119,13 @@ class Core:
 		change_descriptor = AddChecksum(obj["descriptor"] % xpub_prepared)
 		command = '[{"desc": "%s", "internal": false, "range": [0, 100], "timestamp": "now", "keypool": true, "watchonly": true}, {"desc": "%s", "internal": true, "range": [0, 100], "timestamp": "now", "keypool": true, "watchonly": true}]' % (recv_descriptor, change_descriptor)
 
-		r = subprocess.run(self.cli+["-rpcwallet=%s" % name, "importmulti", command], **kwargs)
+		r = run(self.cli+["-rpcwallet=%s" % name, "importmulti", command])
 		print(r)
-		r = subprocess.run(self.cli+["-rpcwallet=%s" % name, "getnewaddress", "", obj["address_type"]], **kwargs)
+		r = run(self.cli+["-rpcwallet=%s" % name, "getnewaddress", "", obj["address_type"]])
 		print(r)
 		first_address = r.stdout.decode('utf-8').replace("\n", "")
 		print(first_address)
-		r = subprocess.run(self.cli+["-rpcwallet=", "sendtoaddress", first_address, INIT_AMOUNT], **kwargs)
+		r = run(self.cli+["-rpcwallet=", "sendtoaddress", first_address, INIT_AMOUNT])
 		print(r)
 		o = {
 			"xpub": xpub,
@@ -133,13 +139,13 @@ class Core:
 		pass
 
 	def broadcast(self, psbt_arr):
-		r = subprocess.run(self.cli+["combinepsbt", json.dumps(psbt_arr)], **kwargs)
+		r = run(self.cli+["combinepsbt", json.dumps(psbt_arr)])
 		print(r)
 		combined = r.stdout.decode('utf-8').replace("\n","")
-		r = subprocess.run(self.cli+["finalizepsbt", combined], **kwargs)
+		r = run(self.cli+["finalizepsbt", combined])
 		print(r)
 		raw = json.loads(r.stdout.decode('utf-8'))["hex"]
-		r = subprocess.run(self.cli+["sendrawtransaction", raw], **kwargs)
+		r = run(self.cli+["sendrawtransaction", raw])
 		print(r)
 
 if __name__ == '__main__':
