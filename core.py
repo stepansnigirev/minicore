@@ -72,7 +72,10 @@ class Wallet:
 
 class Core:
 	def __init__(self, cli="bitcoin-cli"):
-		run(["bitcoind", "--daemon"])
+		try:
+			run(["bitcoind", "--daemon"])
+		except:
+			pass
 		# TODO: load all wallets
 		self.cli = cli.split(" ")
 
