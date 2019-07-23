@@ -35,6 +35,12 @@
   <main role="main" class="inner cover">
     <h1 class="cover-heading">Send to</h1>
     <br>
+    {% if error %}
+    <br><div class="alert alert-danger" role="alert">
+      Error: {{error}}
+    </div>
+    <br>
+    {% endif %}
     <form action="./" method="POST">
       <div class="row">
         <div class="col col-md-8">

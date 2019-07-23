@@ -73,6 +73,8 @@ class Wallet:
 					break
 		r = run(self.cli+["walletcreatefundedpsbt", json.dumps(ins), '[{"%s":%.8f}]' % (address, amount), '0', '{"includeWatching":true,"change_type":"%s"}' % self.props["address_type"], 'true'])
 		print(r)
+		if r.returncode != 0:
+			raise Exception(r.stderr.decode("utf-8"))
 		return json.loads(r.stdout.decode('utf-8'))["psbt"]
 
 class Core:
@@ -141,18 +143,24 @@ class Core:
 		}
 		with open("wallets/%s.wallet" % name, "w") as f:
 			f.write(json.dumps(o))
-		# error = "Command: %s" % command
-		pass
 
 	def broadcast(self, psbt_arr):
 		r = run(self.cli+["combinepsbt", json.dumps(psbt_arr)])
 		print(r)
+		if r.returncode != 0:
+			raise Exception(r.stderr.decode("utf-8"))
 		combined = r.stdout.decode('utf-8').replace("\n","")
 		r = run(self.cli+["finalizepsbt", combined])
 		print(r)
-		raw = json.loads(r.stdout.decode('utf-8'))["hex"]
-		r = run(self.cli+["sendrawtransaction", raw])
+		if r.returncode != 0:
+			raise Exception(r.stderr.decode("utf-8"))
+		raw = json.loads(r.stdout.decode('utf-8'))
+		if "hex" not in raw:
+			raise Exception("Can't finalize the transaction. Are you using the right wallet?")
+		r = run(self.cli+["sendrawtransaction", raw["hex"]])
 		print(r)
+		if r.returncode != 0:
+			raise Exception(r.stderr.decode("utf-8"))
 
 	def gentle_start(self):
 		print("starting gently")

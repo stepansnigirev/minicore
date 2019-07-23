@@ -52,9 +52,15 @@ def send(name):
 		signed_psbt = request.form["signedpsbt"]
 	if unsigned_psbt == "" and address != "":
 		print("generating new psbt", unsigned_psbt, address)
-		unsigned_psbt = w.create_psbt(address, amount)
+		try:
+			unsigned_psbt = w.create_psbt(address, amount)
+		except Exception as e:
+			return render_template("send.html", name=name, info=w.info(), balance=w.balance(), wallet=w, address=address, amount=amount, unsigned_psbt=unsigned_psbt, signed_psbt=signed_psbt, error=e)
 	if signed_psbt != "" and unsigned_psbt != "":
-		cli.broadcast([unsigned_psbt, signed_psbt])
+		try:
+			cli.broadcast([unsigned_psbt, signed_psbt])
+		except Exception as e:
+			return render_template("send.html", name=name, info=w.info(), balance=w.balance(), wallet=w, address=address, amount=amount, unsigned_psbt=unsigned_psbt, signed_psbt=signed_psbt, error=e)
 		return redirect("/wallets/%s/" % name)
 	return render_template("send.html", name=name, info=w.info(), balance=w.balance(), wallet=w, address=address, amount=amount, unsigned_psbt=unsigned_psbt, signed_psbt=signed_psbt)
 
