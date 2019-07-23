@@ -1,10 +1,5 @@
-<!DOCTYPE html>
-<html>
-<head>
-	<title>Wallet interface</title>
-	<link rel="stylesheet" type="text/css" href="/static/bootstrap/css/bootstrap.min.css">
-	<link rel="stylesheet" type="text/css" href="/static/cover.css">
-	<link rel="stylesheet" type="text/css" href="/static/style.css">
+{% extends "base.html" %}
+{% block style %}
   <style type="text/css">
     .btn{
       min-width: 200px;
@@ -19,20 +14,15 @@
       background: #fff;
     }
   </style>
-</head>
-<body class="text-center">
-<div class="cover-container d-flex w-100 h-100 p-3 mx-auto flex-column">
-  <header class="masthead mb-auto">
-    <div class="inner">
+{% endblock %}
+{% block nav %}
       <h3 class="masthead-brand">{{wallet.name}}</h3>
       <nav class="nav nav-masthead justify-content-center">
         <a class="nav-link active" href="/wallets/">Home</a>
         <a class="nav-link active" href="/wallets/{{wallet.name}}/">Back to wallet</a>
       </nav>
-    </div>
-  </header>
-
-  <main role="main" class="inner cover">
+{% endblock %}
+{% block main %}
     <h1 class="cover-heading">Send to</h1>
     <br>
     {% if error %}
@@ -80,13 +70,7 @@
       <button type="submit" class="btn btn-lg btn-secondary">Combine and broadcast</button>
       {% endif %}
     </form>   
-  </main>
-
-  <footer class="mastfoot mt-auto">
-    <div class="inner">
-      <p>Don't spend, HODL!</p>
-    </div>
-  </footer>
-</div>
-</body>
-</html>
+{% endblock %}
+{% block footer %}
+Don't spend, HODL!
+{% endblock %}

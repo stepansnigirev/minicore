@@ -1,25 +1,5 @@
-<!DOCTYPE html>
-<html>
-<head>
-	<title>Wallet interface</title>
-	<link rel="stylesheet" type="text/css" href="/static/bootstrap/css/bootstrap.min.css">
-	<link rel="stylesheet" type="text/css" href="/static/cover.css">
-	<link rel="stylesheet" type="text/css" href="/static/style.css">
-</head>
-<body class="text-center">
-<div class="cover-container d-flex w-100 h-100 p-3 mx-auto flex-column">
-  <header class="masthead mb-auto">
-    <div class="inner">
-      <!-- <h3 class="masthead-brand">Wallet interface</h3> -->
-<!--       <nav class="nav nav-masthead justify-content-center">
-        <a class="nav-link active" href="#">Home</a>
-        <a class="nav-link" href="#">Features</a>
-        <a class="nav-link" href="#">Contact</a>
-      </nav> -->
-    </div>
-  </header>
-
-  <main role="main" class="inner cover">
+{% extends "base.html" %}
+{% block main %}
     <h1 class="cover-heading">Select your wallet</h1>
     <p class="lead">
     	<br/>
@@ -33,13 +13,7 @@
 		{% endif %}
 		{% endfor %}
     </div>
-  </main>
-
-  <footer class="mastfoot mt-auto">
-    <div class="inner">
-      <p>Select the wallet to open or create a new one</p>
-    </div>
-  </footer>
-</div>
-</body>
-</html>
+{% endblock %}
+{% block footer %}
+Select the wallet to open or create a new one
+{% endblock %}
