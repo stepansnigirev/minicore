@@ -17,7 +17,7 @@ def index():
 	return render_template("wallets.html", wallets=arr)
 	# return render_template("index.html")
 
-@app.route('/wallets/') 
+@app.route('/wallets/')
 def wallets():
 	check()
 	arr = cli.list_wallets()
@@ -64,7 +64,7 @@ def send(name):
 		return redirect("/wallets/%s/" % name)
 	return render_template("send.html", name=name, info=w.info(), balance=w.balance(), wallet=w, address=address, amount=amount, unsigned_psbt=unsigned_psbt, signed_psbt=signed_psbt)
 
-@app.route('/wallets/<name>/receive/') 
+@app.route('/wallets/<name>/receive/')
 def receive(name):
 	check()
 	try:
@@ -73,7 +73,7 @@ def receive(name):
 		return render_template("wallet.html", name=name, error=e)
 	addr = w.props["addresses"][-1]
 	num = len(w.props["addresses"])-1
-	return render_template("receive.html", name=name, info=w.info(), balance=w.balance(), wallet=w, addr=addr, num=num)
+	return render_template("receive.html", name=name, info=w.info(), balance=w.balance(), wallet=w, addr=addr, num=num, url="bitcoin:%s?index=%d" % (addr, num))
 
 @app.route('/wallets/<name>/receive/new/') 
 def newaddr(name):

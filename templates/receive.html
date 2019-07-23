@@ -23,7 +23,7 @@
 {% endblock %}
 {% block main %}
     <h1 class="cover-heading">Receiving address #{{num}}</h1>
-    <img src="{{qrcode('bitcoin:'+addr)}}" class="qr">
+    <img src="{{qrcode(url)}}" class="qr">
     <br>
     <br>
     {{addr}}

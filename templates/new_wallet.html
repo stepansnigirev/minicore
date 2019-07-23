@@ -1,32 +1,81 @@
 {% extends "base.html" %}
+{% block style %}
+<style type="text/css">
+  .video{
+    width: 90%;
+  }
+  .popup{
+    background: rgba(0,0,0,0.7);
+    width: 100%;
+    height: 100%;
+    display: none;
+    position: fixed;
+    left: 0;
+    top: 0;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+</style>
+{% endblock %}
 {% block nav %}
-      <nav class="nav nav-masthead justify-content-center">
-        <a class="nav-link active" href="/wallets/">Home</a>
-      </nav>
+  <nav class="nav nav-masthead justify-content-center">
+    <a class="nav-link active" href="/wallets/">Home</a>
+  </nav>
 {% endblock %}
 {% block main %}
-    <h1 class="cover-heading">Create a new wallet</h1>
-    <br>
-    <form action="./" method="POST">
-      <div class="form-group">
-        <label for="walletLabel">Wallet label</label>
-        <input type="text" class="form-control" name="walletLabel" id="walletLabel" aria-describedby="wallet-name-help" placeholder="Enter wallet name" value="{{name}}">
-        <small id="wallet-name-help" class="form-text text-muted">This name will appear in the wallet list, it should be unique</small>
-      </div>
-      <div class="form-group">
-        <label for="walletXpub">Master public key</label>
-        <input type="text" class="form-control" name="walletXpub" id="walletXpub" placeholder="xpub..." aria-describedby="wallet-xpub-help" value="{{xpub}}">
-        <small id="wallet-xpub-help" class="form-text text-muted">Master public key is used to derive new addresses and watch blockchain for transactions</small>
-      </div>
-      <button type="submit" class="btn btn-lg btn-secondary">Submit</button>
-    </form>    
-    {% if error %}
-    <br><br>
-    <div class="alert alert-danger" role="alert">
-      Error: {{error}}
+  <div class="popup" id="popup">
+    <video muted playsinline id="qr-video" class="video"></video>
+  </div>
+  <h1 class="cover-heading">Create a new wallet</h1>
+  <br>
+  <form action="./" method="POST">
+    <div class="form-group">
+      <label for="walletLabel">Wallet label</label>
+      <input type="text" class="form-control" name="walletLabel" id="walletLabel" aria-describedby="wallet-name-help" placeholder="Enter wallet name" value="{{name}}">
+      <small id="wallet-name-help" class="form-text text-muted">This name will appear in the wallet list, it should be unique</small>
     </div>
-    {% endif %}
+    <div class="form-group">
+      <label for="walletXpub">Master public key</label>
+
+      <div class="input-group mb-3">
+        <input type="text" class="form-control" name="walletXpub" id="walletXpub" placeholder="xpub..." aria-describedby="wallet-xpub-help" value="{{xpub}}">
+        <div class="input-group-append">
+          <button class="btn btn-primary" type="button" id="scanme">QR</button>
+        </div>
+      </div>
+      <small id="wallet-xpub-help" class="form-text text-muted">Master public key is used to derive new addresses and watch blockchain for transactions</small>
+    </div>
+    <button type="submit" class="btn btn-lg btn-secondary">Submit</button>
+  </form>    
+  {% if error %}
+  <br><br>
+  <div class="alert alert-danger" role="alert">
+    Error: {{error}}
+  </div>
+  {% endif %}
 {% endblock %}
 {% block footer %}
-Enter the name of the wallet and its master public key.
+  Enter the name of the wallet and its master public key.
+
+<script type="module">
+  import QrScanner from "/static/qr/qr-scanner.min.js";
+  QrScanner.WORKER_PATH = '/static/qr/qr-scanner-worker.min.js';
+
+  const video = document.getElementById('qr-video');
+
+  const scanner = new QrScanner(video, result => {
+    document.getElementById("walletXpub").value = result;
+    document.getElementById("popup").style.display = 'none';
+    scanner.stop();
+  });
+  document.getElementById("scanme").addEventListener("click", function(){
+    document.getElementById("popup").style.display = 'flex';
+    scanner.start();
+  });
+  document.getElementById("popup").addEventListener("click", function(){
+    document.getElementById("popup").style.display = 'none';
+    scanner.stop();
+  });
+</script>
 {% endblock %}

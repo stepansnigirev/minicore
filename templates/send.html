@@ -10,8 +10,45 @@
       min-width: 500px;
     }
     .qr{
+      display: none;
+      width: 100%;
+      position: absolute;
+      z-index: 900;
+      top: 50%;
+      left: 50%;
+      margin-top: -50%;
+      margin-left: -50%; 
+      align-items: center;
+      justify-content: center;
+    }
+    .qr>img{
       padding: 30px;
       background: #fff;
+      width: 350px;
+      max-width: 100%;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+      cursor: none;
+    }
+    .qrlink:hover > .qr{
+      display: flex;
+    }
+    .qrlink:focus > .qr{
+      display: block;
+    }
+    .video{
+      width: 90%;
+    }
+    .popup{
+      background: rgba(0,0,0,0.7);
+      width: 100%;
+      height: 100%;
+      display: none;
+      position: fixed;
+      left: 0;
+      top: 0;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
     }
   </style>
 {% endblock %}
@@ -23,6 +60,10 @@
       </nav>
 {% endblock %}
 {% block main %}
+    <div class="popup" id="popup">
+      <video muted playsinline id="qr-video" class="video"></video>
+    </div>
+
     <h1 class="cover-heading">Send to</h1>
     <br>
     {% if error %}
@@ -47,14 +88,14 @@
       {% if unsigned_psbt != "" %}
       <div class="row">
         <div class="col">
-          <label for="unsignedpsbt"><br>Unsigned transaction</label>
+          <label for="unsignedpsbt"><br>Unsigned transaction <a href="#" class="qrlink">(QR) <div class="qr"><img src="{{qrcode(unsigned_psbt)}}"></div></a></label>
           <textarea disabled class="form-control" id="unsignedpsbt" rows="10">{{unsigned_psbt}}</textarea>
           <small class="form-text text-muted">Save this data to the SD card as <b>unsigned.psbt</b> and sign on the device.</small>
         </div>
       </div>
       <div class="row">
         <div class="col">
-          <label for="signedpsbt"><br>Signed transaction</label>
+          <label for="signedpsbt"><br>Signed transaction (<a href="#" id="scanme">scan</a>)</label>
           <textarea class="form-control" id="signedpsbt" name="signedpsbt" rows="10">{{signed_psbt}}</textarea>
           <small class="form-text text-muted">Paste content of <b>signed.psbt</b> here.</small>
         </div>
@@ -73,4 +114,25 @@
 {% endblock %}
 {% block footer %}
 Don't spend, HODL!
+
+<script type="module">
+  import QrScanner from "/static/qr/qr-scanner.min.js";
+  QrScanner.WORKER_PATH = '/static/qr/qr-scanner-worker.min.js';
+
+  const video = document.getElementById('qr-video');
+
+  const scanner = new QrScanner(video, result => {
+    document.getElementById("signedpsbt").value = result;
+    document.getElementById("popup").style.display = 'none';
+    scanner.stop();
+  });
+  document.getElementById("scanme").addEventListener("click", function(){
+    document.getElementById("popup").style.display = 'flex';
+    scanner.start();
+  });
+  document.getElementById("popup").addEventListener("click", function(){
+    document.getElementById("popup").style.display = 'none';
+    scanner.stop();
+  });
+</script>
 {% endblock %}
