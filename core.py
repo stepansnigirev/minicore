@@ -2,9 +2,9 @@ import subprocess
 import json
 from ecc.helper import decode_base58, encode_base58_checksum
 from descriptor import AddChecksum
-import os
+import os, time
 
-INIT_AMOUNT = "0.001" # amount to send to a new wallet
+INIT_AMOUNT = "0.005" # amount to send to a new wallet
 
 import sys
 
@@ -17,16 +17,16 @@ def run(commands):
 		return subprocess.run(" ".join(commands), **kwargs)
 
 wallet_types = {
-    b"\x04\x88\xb2\x1e": {"descriptor": 'pkh(%s)', "testnet": False, "address_type": "legacy"},
-    b"\x04\x9d\x7c\xb2": {"descriptor": 'sh(wpkh(%s))', "testnet": False, "address_type": "p2sh-segwit"},
-    b"\x04\xb2\x47\x46": {"descriptor": 'wpkh(%s)', "testnet": False, "address_type": "bech32"},
+    # b"\x04\x88\xb2\x1e": {"descriptor": 'pkh(%s)', "testnet": False, "address_type": "legacy"},
+    # b"\x04\x9d\x7c\xb2": {"descriptor": 'sh(wpkh(%s))', "testnet": False, "address_type": "p2sh-segwit"},
+    # b"\x04\xb2\x47\x46": {"descriptor": 'wpkh(%s)', "testnet": False, "address_type": "bech32"},
     b"\x04\x35\x87\xcf": {"descriptor": 'pkh(%s)', "testnet": True, "address_type": "legacy"},
     b"\x04\x4a\x52\x62": {"descriptor": 'sh(wpkh(%s))', "testnet": True, "address_type": "p2sh-segwit"},
     b"\x04\x5f\x1c\xf6": {"descriptor": 'wpkh(%s)', "testnet": True, "address_type": "bech32"},
 }
 default_types = {
 	True: b"\x04\x35\x87\xcf", # testnet
-	False: b"\x04\x88\xb2\x1e" # mainnet
+	# False: b"\x04\x88\xb2\x1e" # mainnet
 }
 
 class Wallet:
@@ -34,9 +34,14 @@ class Wallet:
 		self.name = name
 		self.cli = cli.split(" ")+['-rpcwallet=%s' % name]
 		self.filename = "wallets/%s.wallet" % name
-		with open(self.filename, "r") as f:
-			content = f.read()
-		self.props = json.loads(content)
+		if not os.path.isfile(self.filename):
+			raise Exception("Wallet '%s' doesn't exist" % name)
+		try:
+			with open(self.filename, "r") as f:
+				content = f.read()
+			self.props = json.loads(content)
+		except:
+			raise Exception("Wallet is corrupted")
 
 	def info(self):
 		r = run(self.cli+["getwalletinfo"])
@@ -72,10 +77,6 @@ class Wallet:
 
 class Core:
 	def __init__(self, cli="bitcoin-cli"):
-		try:
-			run(["bitcoind", "--daemon"])
-		except:
-			pass
 		# TODO: load all wallets
 		self.cli = cli.split(" ")
 
@@ -85,7 +86,7 @@ class Core:
 		loaded_wallets = self.list_wallets()
 		wallets = [wallet["name"] for wallet in wallets_obj["wallets"]]
 		for wallet in wallets:
-			if wallet not in loaded_wallets:
+			if wallet not in loaded_wallets and wallet != "":
 				print("Loading", wallet)
 				self.load_wallet(wallet)
 
@@ -108,12 +109,12 @@ class Core:
 
 	def new_wallet(self, name, xpub):
 		name = name.replace(" ", "_")
-		r = run(self.cli+["createwallet", name, "true"])
-		print(r)
-
-		raw_xpub = decode_base58(xpub, num_bytes=82)
+		try:
+			raw_xpub = decode_base58(xpub, num_bytes=82)
+		except Exception as e:
+			raise Exception("Wrong xpub encoding. Should be base58 encoding.")
 		if raw_xpub[:4] not in wallet_types.keys():
-			return render_template("new_wallet.html", error="Wrong xpub format", name=name, xpub=xpub)
+			raise Exception("Wrong xpub format. Use testnet only.")
 		obj = wallet_types[raw_xpub[:4]]
 		normalized_xpub = encode_base58_checksum(default_types[obj["testnet"]]+raw_xpub[4:])
 		xpub_prepared = "%s/0/*" % (normalized_xpub)
@@ -122,6 +123,8 @@ class Core:
 		change_descriptor = AddChecksum(obj["descriptor"] % xpub_prepared)
 		command = '[{"desc": "%s", "internal": false, "range": [0, 100], "timestamp": "now", "keypool": true, "watchonly": true}, {"desc": "%s", "internal": true, "range": [0, 100], "timestamp": "now", "keypool": true, "watchonly": true}]' % (recv_descriptor, change_descriptor)
 
+		r = run(self.cli+["createwallet", name, "true"])
+		print(r)
 		r = run(self.cli+["-rpcwallet=%s" % name, "importmulti", command])
 		print(r)
 		r = run(self.cli+["-rpcwallet=%s" % name, "getnewaddress", "", obj["address_type"]])
@@ -151,8 +154,31 @@ class Core:
 		r = run(self.cli+["sendrawtransaction", raw])
 		print(r)
 
+	def gentle_start(self):
+		print("starting gently")
+		r = run(self.cli + ["-getinfo"])
+		if r.returncode == 0:
+			print("bitcoind is running and everything is fine")
+			return json.loads(r.stdout.decode('utf-8'))
+		else:
+			print("error from bitcoin-cli (err %d):" % r.returncode, r.stderr.decode('utf-8'))
+		r = run(["bitcoind", "--daemon"])
+		if r.returncode != 0:
+			print("can't run bitcoind (err %d):" % r.returncode, r.stderr.decode('utf-8'))
+			return {"error": r.stderr.decode('utf-8'), "errorcode": r.returncode, "reason": "bitcoind"}
+		t0 = time.time()
+		t = t0
+		while t < t0+90:
+			r = run(self.cli + ["-getinfo"])
+			if r.returncode == 0:
+				return json.loads(r.stdout.decode('utf-8'))
+			time.sleep(0.1)
+		return {"error": r.stderr.decode('utf-8'), "errorcode": r.returncode, "reason": "timeout"}
+
+
 if __name__ == '__main__':
 	core = Core()
+	print(core.gentle_start())
 	print("result:", core.list_wallets())
 	core.load_all_wallets()
 	print("result:", core.list_wallets())

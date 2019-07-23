@@ -28,12 +28,18 @@
 
   <main role="main" class="inner cover">
     <h1 class="cover-heading">{{name}}</h1>
+    {% if error %}
+    <br><br><div class="alert alert-danger" role="alert">
+      Error: {{error}}
+    </div>
+    {% else %}
     Balance: {{balance.watchonly.trusted}} BTC ( {{balance.watchonly.untrusted_pending}} pending )
     <br><br>
     <div>
       <a href="./receive/" class="btn btn-lg btn-secondary">Receive</a>
       <a href="./send/" class="btn btn-lg btn-secondary">Send</a>
     </div>
+    {% endif %}
   </main>
 
   <footer class="mastfoot mt-auto">
